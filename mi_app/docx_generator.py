@@ -65,32 +65,38 @@ class DocumentGenerator:
         except Exception as e:
             raise ValueError(f"Failed to load template: {str(e)}")
 
-        # Prepare context data for the template
+        sheet_name, df = dataframes
         context = {
-            'title': title if title else 'Generated Document',
-            'date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'sheets': []
+            'author': df.iloc[5, 42] if not None else '',
+            'review': df.iloc[6, 42],
+            'release': df.iloc[7, 42],
+            'version':df.iloc.iloc[3, 42],
+            'date': df.iloc[9, 42],
+            'state': df.iloc[8, 42],
+
+
         }
+        # Prepare context data for the template
 
-        # Process each dataframe
-        for sheet_name, df in dataframes:
-            # Convert dataframe to dict for template
-            headers = list(df.columns)
-            rows = []
-
-            for _, row in df.iterrows():
-                row_data = {}
-                for i, col in enumerate(headers):
-                    row_data[col] = row[i]
-                rows.append(row_data)
-
-            sheet_data = {
-                'name': sheet_name,
-                'headers': headers,
-                'rows': rows
-            }
-
-            context['sheets'].append(sheet_data)
+        # # Process each dataframe
+        # for sheet_name, df in dataframes:
+        #     # Convert dataframe to dict for template
+        #     headers = list(df.columns)
+        #     rows = []
+        #
+        #     for _, row in df.iterrows():
+        #         row_data = {}
+        #         for i, col in enumerate(headers):
+        #             row_data[col] = row[i]
+        #         rows.append(row_data)
+        #
+        #     sheet_data = {
+        #         'name': sheet_name,
+        #         'headers': headers,
+        #         'rows': rows
+        #     }
+        #
+        #     context['sheets'].append(sheet_data)
 
         # Render the template with our data
         doc.render(context)
