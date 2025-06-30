@@ -585,5 +585,15 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,pycharm,pycharm+iml,pycharm+all,jetbrains,jetbrains+iml,jetbrains+all.en
+
+# macOS
+.DS_Store
+
+# Project specific
 *.docx
 *.xlsx
+mi_app/credentials.json
+templete/
+
+# Uncomment if you want to ignore the entire .idea folder
+.idea/
