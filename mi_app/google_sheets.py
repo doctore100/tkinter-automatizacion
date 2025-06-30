@@ -198,4 +198,4 @@ class GoogleSheetsReader:
             raise ValueError("Invalid access type")
         spreadsheet_data = spreadsheet.sheet1.get(return_type=GridRangeType.ListOfLists)
         df = pd.DataFrame(spreadsheet_data)
-        return [('Sheet1', df)]
+        return df

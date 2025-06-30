@@ -1,6 +1,8 @@
 import os
-import datetime
+
+import pandas as pd
 from docxtpl import DocxTemplate
+
 from mi_app.utils import get_default_template_path
 
 
@@ -65,43 +67,34 @@ class DocumentGenerator:
         except Exception as e:
             raise ValueError(f"Failed to load template: {str(e)}")
 
-        sheet_name, df = dataframes
-        context = {
-            'author': df.iloc[5, 42] if not None else '',
-            'review': df.iloc[6, 42],
-            'release': df.iloc[7, 42],
-            'version':df.iloc.iloc[3, 42],
-            'date': df.iloc[9, 42],
-            'state': df.iloc[8, 42],
-
-
+        # Definir un mapeo de campos a posiciones (fila, columna)
+        executive_summary = {
+            'author': (5, 42),
+            'review': (6, 42),
+            'release': (7, 42),
+            'version': (3, 42),
+            'date': (9, 42),
+            'state': (8, 42)
         }
-        # Prepare context data for the template
+        page_header = {
+            'code': (2, 42),
+            # 'revision':"",
+            'f_emission': (4, 42)
+        }
+        # The base filter is the first two columns of the data frame that contain the Nivel Jerárquico and the Puesto
+        # by which the filter will then be made
+        base_filter = dataframes.iloc[10:, 2:3]
+        another_data = dataframes.iloc[11:, 4:]
 
-        # # Process each dataframe
-        # for sheet_name, df in dataframes:
-        #     # Convert dataframe to dict for template
-        #     headers = list(df.columns)
-        #     rows = []
-        #
-        #     for _, row in df.iterrows():
-        #         row_data = {}
-        #         for i, col in enumerate(headers):
-        #             row_data[col] = row[i]
-        #         rows.append(row_data)
-        #
-        #     sheet_data = {
-        #         'name': sheet_name,
-        #         'headers': headers,
-        #         'rows': rows
-        #     }
-        #
-        #     context['sheets'].append(sheet_data)
-
-        # Render the template with our data
+        # Crear el diccionario usando comprensión de diccionarios
+        context = {
+            field: '' if pd.isna(dataframes.iloc[row, col]) else dataframes.iloc[row, col]
+            for field, (row, col) in executive_summary.items()
+        }
         doc.render(context)
 
         # Save the document
         doc.save(output_path)
+        return doc.save('index.docx')
 
-        return output_path
+        # return output_path
