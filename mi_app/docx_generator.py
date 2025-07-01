@@ -51,15 +51,30 @@ class DocumentGenerator:
 
     def generate_from_dataframes(self, dataframes, output_path, title=None):
         """
-        Generate a document from dataframes using a template.
+        Generates a Word document based on a given template, using data from specified dataframes
+        to populate the document's context. This method processes the data, maps relevant fields
+        to their locations in the document template, dynamically generates the content, and saves
+        the resulting Word document to the specified output path.
 
-        Args:
-            dataframes: List of tuples containing (worksheet_name, dataframe)
-            output_path: Path to save the output document
-            title: Optional title for the document
+        Data from the input dataframes is used to create an executive summary and populate specific
+        page headers in the template. The function assumes that certain rows and columns have specific
+        meanings and uses them to extract, filter, and process required data. After processing the
+        data, a context dictionary is created and rendered into the template, followed by saving the
+        generated document.
 
-        Returns:
-            Path to the generated document
+        The method ensures consistency between the base filter and additional data, aligning and
+        concatenating them as necessary for accurate processing. It requires a pre-defined template
+        available at the specified path to render the final document.
+
+        :param dataframes: A pandas DataFrame containing input data; assumes specific
+            columns and rows contain required fields such as "Nivel Jerárquico" and "Puesto".
+        :type dataframes: pandas.DataFrame
+        :param output_path: File path where the generated Word document will be saved.
+        :type output_path: str
+        :param title: Optional parameter to specify the title of the document.
+        :type title: str, optional
+        :return: A successful save operation for the document at the specified location.
+        :rtype: None
         """
         # Load the template
         try:
@@ -83,9 +98,19 @@ class DocumentGenerator:
         }
         # The base filter is the first two columns of the data frame that contain the Nivel Jerárquico and the Puesto
         # by which the filter will then be made
-        base_filter = dataframes.iloc[10:, 2:3]
+        base_filter = (
+            dataframes.iloc[10:, 2:3]
+            .replace('', pd.NA)
+            .replace(' ', pd.NA)
+            .dropna()
+        )
+        # The other data contains the rest of the fields in the data frame.
         another_data = dataframes.iloc[11:, 4:]
-
+        if base_filter.shape[0] == another_data.shape[0]:
+            df_final = pd.DataFrame({
+                **base_filter.reset_index(drop=True).to_dict('list'),
+                **another_data.reset_index(drop=True).to_dict('list')
+            })
         # Crear el diccionario usando comprensión de diccionarios
         context = {
             field: '' if pd.isna(dataframes.iloc[row, col]) else dataframes.iloc[row, col]
