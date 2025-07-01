@@ -276,7 +276,6 @@ class PDFGenerator:
 
     def __init__(self):
         self.pdf = None
-#TODO: Reformat the function for generate a document templete
     def generate_from_dataframes(self, dataframes, output_path, title=None):
         """
         Generate a PDF file from a list of dataframes

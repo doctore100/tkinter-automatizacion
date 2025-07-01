@@ -40,3 +40,21 @@ def validate_json_file(file_path, required_fields=None):
         return False, "Invalid JSON format"
     except Exception as e:
         return False, f"Error validating JSON: {str(e)}"
+
+
+def clean_data(data_fields: dict) -> dict:
+    """
+    Cleans the data by replacing NaN values with empty strings and extracting values from dataframes.
+
+    Args:
+        data_fields (dict): A dictionary containing field names as keys and tuples of (row, col) indices as values.
+
+    Returns:
+        dict: A cleaned dictionary with field names as keys and corresponding values from dataframes,
+              where NaN values are replaced with empty strings.
+    """
+    cleaned_data = {
+        field: '' if pd.isna(dataframes.iloc[row, col]) else dataframes.iloc[row, col]
+        for field, (row, col) in data_fields.items()
+    }
+    return cleaned_data
