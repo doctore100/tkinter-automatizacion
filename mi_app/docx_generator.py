@@ -43,7 +43,7 @@ class DocumentGenerator:
         """Reset to using the default template."""
         self.template_path = self.default_template_path
 
-    def generate_from_dataframes(
+    def generate_from_dataframes_title_page(
             self,
             dataframes: pd.DataFrame,
             output_path: str,
@@ -82,10 +82,12 @@ class DocumentGenerator:
         }
 
         field_position_mapping = {**executive_summary, **page_header}
-        doc.render(clean_data(field_position_mapping))
+        doc.render(clean_data(field_position_mapping, dataframes))
 
         # Process data and generate document
-        self._process_data(dataframes)
+        df_data_general =self._process_data(dataframes)
+        data_to_generate_pdf=self._process_general_data(df_data_general)
+
         doc.save(output_path)
 
     def _process_data(self, dataframes: pd.DataFrame) -> pd.DataFrame:
@@ -107,8 +109,65 @@ class DocumentGenerator:
         another_data = dataframes.iloc[11:, 4:]
 
         if base_filter.shape[0] == another_data.shape[0]:
-            return pd.DataFrame({
+            pd.DataFrame({
                 **base_filter.reset_index(drop=True).to_dict('list'),
                 **another_data.reset_index(drop=True).to_dict('list')
             })
+
         raise ValueError("DataFrames have mismatched lengths after processing")
+
+    def _process_general_data(self, dataframes: pd.DataFrame, job_title: str, level_hierarchy: str) -> pd.Series:
+        """Process and combine dataframe sections.
+
+        Searches for a row where the first column contains job_title and
+        the second column contains level_hierarchy, then returns the complete row.
+        This version handles whitespace, case variations, and missing values robustly.
+
+        Args:
+            dataframes: Input dataframe containing the data
+            job_title: Value to search for in the first column
+            level_hierarchy: Value to search for in the second column
+
+        Returns:
+            pd.Series: Complete row that matches both criteria
+
+        Raises:
+            ValueError: If no matching row is found or multiple rows match
+        """
+        # Get the first two columns
+        first_col = dataframes.iloc[:, 0]
+        second_col = dataframes.iloc[:, 1]
+
+        # Convert to string, handle NaN values, strip whitespace, and convert to lowercase for comparison
+        first_col_clean = first_col.astype(str).str.strip().str.lower()
+        second_col_clean = second_col.astype(str).str.strip().str.lower()
+
+        # Clean the search parameters
+        job_title_clean = str(job_title).strip().lower()
+        level_hierarchy_clean = str(level_hierarchy).strip().lower()
+
+        # Filter out 'nan' values that come from converting NaN to string
+        first_col_clean = first_col_clean.replace('nan', '')
+        second_col_clean = second_col_clean.replace('nan', '')
+
+        # Create boolean mask searching for the specific values
+        mask = (first_col_clean == job_title_clean) & (second_col_clean == level_hierarchy_clean)
+
+        # Filter the dataframe
+        matching_rows = dataframes[mask]
+
+        # Check if exactly one row matches
+        if matching_rows.empty:
+            raise ValueError(
+                f"No row found with '{job_title}' in first column and '{level_hierarchy}' in second column. "
+                f"Available values in first column: {first_col.dropna().unique().tolist()[:10]}... "
+                f"Available values in second column: {second_col.dropna().unique().tolist()[:10]}..."
+            )
+        elif len(matching_rows) > 1:
+            raise ValueError(
+                f"Multiple rows found with '{job_title}' in first column and '{level_hierarchy}' in second column. "
+                f"Found {len(matching_rows)} matching rows at indices: {matching_rows.index.tolist()}"
+            )
+
+        # Return the complete matching row
+        return matching_rows.iloc[0]

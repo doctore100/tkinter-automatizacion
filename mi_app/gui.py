@@ -26,9 +26,9 @@ class GoogleToDocApp:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Google Sheets to Document Converter")
-        self.root.geometry("700x500")
-        self.root.configure(padx=20, pady=20)
+        self.root.title("Conversor de Google Sheets para Documento Word")
+        self.root.geometry("700x700")
+        self.root.configure(padx=20, pady=20, bg="lightblue")
 
         # Initialize components
         self.connection = GoogleConnection()
@@ -45,21 +45,21 @@ class GoogleToDocApp:
 
         # Setup UI
         self._setup_styles()
-        self._create_widgets()
+        self._configure_ui_layout()
 
     def _setup_styles(self):
-        """Setup ttk styles"""
+        """Setup custom styles for the UI"""
         style = ttk.Style()
         style.configure("TFrame", padding=10)
         style.configure("TButton", padding=6)
         style.configure("TRadiobutton", padding=5)
-        style.configure("Header.TLabel", font=("Arial", 16, "bold"))
-        style.configure("Subheader.TLabel", font=("Arial", 10))
+        style.configure("", font=("Arial", 16, "bold"))
+        style.configure("Sub.TLabel", font=("Arial", 10))
         style.configure("Status.TLabel", padding=2, relief="sunken")
         # Add a special style for the Generate PDF button
         style.configure("Generate.TButton", padding=10, font=("Arial", 12, "bold"))
 
-    def _create_widgets(self):
+    def _configure_ui_layout(self):
         """Create all UI widgets"""
         # Main container
         main_container = ttk.Frame(self.root)
@@ -71,24 +71,24 @@ class GoogleToDocApp:
 
         ttk.Label(
             header_frame,
-            text="Google Sheets to Document Converter",
-            style="Header.TLabel"
-        ).pack()
+            text="Convertidor de Google Sheets para Documento Word",
+            style="Sub.TLabel"
+        ).pack(pady=5)
 
         ttk.Label(
             header_frame,
-            text="Convert Google Sheets data to formatted documents",
-            style="Subheader.TLabel"
+            text="Conversor de Google Sheets a Documento Word",
+            style="Sub.TLabel"
         ).pack(pady=5)
 
-        # Credentials frame
-        creds_frame = ttk.LabelFrame(main_container, text="Google API Credentials")
+        # Credentials frame for validation
+        creds_frame = ttk.LabelFrame(main_container, text="Credenciales de la api de Google")
         creds_frame.pack(fill="x", pady=10, padx=5)
-
+        # Validation de las credenciales de google sheet
         ttk.Button(
             creds_frame,
             text="Select Credentials File",
-            command=self._select_credentials
+            command=self._select_credentials # retorna true o false
         ).pack(side="left", padx=5, pady=10)
 
         self.creds_label = ttk.Label(creds_frame, text="No credentials selected")
@@ -101,7 +101,7 @@ class GoogleToDocApp:
         ).pack(side="right", padx=5, pady=10)
 
         # Template selection frame
-        template_frame = ttk.LabelFrame(main_container, text="Document Template")
+        template_frame = ttk.LabelFrame(main_container, text="Templete del documento Word:")
         template_frame.pack(fill="x", pady=10, padx=5)
 
         ttk.Label(
@@ -109,26 +109,26 @@ class GoogleToDocApp:
             text="Template:"
         ).pack(side="left", padx=5, pady=10)
 
-        template_entry = ttk.Entry(
+        template_entry = ttk.Label(
             template_frame,
             textvariable=self.template_path_var,
             width=40
         )
         template_entry.pack(side="left", padx=5, pady=10, fill="x", expand=True)
 
-        ttk.Button(
-            template_frame,
-            text="Browse",
-            command=self._select_template
-        ).pack(side="left", padx=5, pady=10)
+        # ttk.Button(
+        #     template_frame,
+        #     text="Browse",
+        #     command=self._select_template
+        # ).pack(side="left", padx=5, pady=10)
+        #
+        # ttk.Button(
+        #     template_frame,
+        #     text="Reset to Default",
+        #     command=self._reset_template
+        # ).pack(side="left", padx=5, pady=10)
 
-        ttk.Button(
-            template_frame,
-            text="Reset to Default",
-            command=self._reset_template
-        ).pack(side="left", padx=5, pady=10)
-
-        # Access method for Google Sheets
+        # Access method for Google Sheets and data manipulations
         self.access_frame = ttk.LabelFrame(main_container, text="Access Method")
         self.access_frame.pack(fill="x", pady=10, padx=5)
 
@@ -136,33 +136,37 @@ class GoogleToDocApp:
             self.access_frame,
             text="By Name",
             variable=self.access_var,
-            value="name"
+            value="name",
+            command=self._update_label
         ).pack(side="left", padx=10, pady=10)
 
         ttk.Radiobutton(
             self.access_frame,
             text="By Key",
             variable=self.access_var,
-            value="key"
+            value="key",
+            command=self._update_label
         ).pack(side="left", padx=10, pady=10)
 
         ttk.Radiobutton(
             self.access_frame,
             text="By URL",
             variable=self.access_var,
-            value="url"
+            value="url",
+            command=self._update_label
         ).pack(side="left", padx=10, pady=10)
 
         # Input fields
         input_frame = ttk.Frame(main_container)
         input_frame.pack(fill="x", pady=10, padx=5)
 
-        self.identifier_label = ttk.Label(input_frame, text="Spreadsheet URL:")
+        self.identifier_label = ttk.Label(input_frame, text="Spreadsheet by: " )
         self.identifier_label.grid(row=0, column=0, sticky="w", pady=5)
+        self._update_label()
 
         ttk.Entry(
             input_frame,
-            textvariable=self.identifier_var,
+            textvariable=self.identifier_var,# el contenido entero del entry
             width=60
         ).grid(row=0, column=1, sticky="ew", pady=5, padx=5)
 
@@ -175,7 +179,7 @@ class GoogleToDocApp:
 
         input_frame.columnconfigure(1, weight=1)
 
-        # Buttons
+        # Buttons: definen el contenedor de los botones
         button_frame = ttk.Frame(main_container)
         button_frame.pack(fill="x", pady=20, padx=5)
 
@@ -256,7 +260,7 @@ class GoogleToDocApp:
             )
             return
 
-        identifier = self.identifier_var.get()
+        identifier = self.identifier_var.get() # Este es el valor de identificador que controla el dato entero del entry
         if not identifier:
             messagebox.showwarning(
                 "Warning",
@@ -269,6 +273,7 @@ class GoogleToDocApp:
 
             # Get data from Google Sheets
             access_type = self.access_var.get()
+            #TODO-> hace la primera lectura y devuelve un df, esto es lo primero que hay que arreglar para que use el templete
             self.current_data = self.sheets_reader.read_sheets(access_type, identifier)
 
             if not self.current_data:
@@ -293,35 +298,35 @@ class GoogleToDocApp:
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Create a tab for each worksheet
-        for sheet_name, df in self.current_data:
-            frame = ttk.Frame(notebook)
-            notebook.add(frame, text=sheet_name)
+        # TODO -> aqui recibe el db y lo analiza por eso no usa el templete en el preview
 
-            # Create a treeview to display the data
-            tree = ttk.Treeview(frame)
-            tree.pack(fill="both", expand=True)
+        frame = ttk.Frame(notebook)
+        notebook.add(frame, text="Data Preview")
 
-            # Define columns
-            tree["columns"] = list(df.columns)
-            tree["show"] = "headings"
+        # Create a treeview to display the data
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".docx",
+            filetypes=[("Word Document", "*.docx")]
+        )
+        if file_path:
+            try:
+                self.status_var.set("Generating document...")
+                title = self.title_var.get() if self.title_var.get() else None
+                self.doc_generator.generate_from_dataframes_title_page(self.current_data, file_path, title)
+                self.status_var.set("Document generated successfully")
+                messagebox.showinfo("Success", "Document generated successfully")
+            except Exception as e:
+                self.status_var.set(f"Error generating document: {str(e)}")
+                messagebox.showerror("Error", f"Failed to generate document: {e}")
 
-            # Set column headings
-            for col in df.columns:
-                tree.heading(col, text=col)
-                tree.column(col, width=100)
+        # Add scrollbars
+        vsb = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        vsb.pack(side="right", fill="y")
+        tree.configure(yscrollcommand=vsb.set)
 
-            # Add data rows
-            for i, row in df.iterrows():
-                tree.insert("", "end", values=list(row))
-
-            # Add scrollbars
-            vsb = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
-            vsb.pack(side="right", fill="y")
-            tree.configure(yscrollcommand=vsb.set)
-
-            hsb = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
-            hsb.pack(side="bottom", fill="x")
-            tree.configure(xscrollcommand=hsb.set)
+        hsb = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
+        hsb.pack(side="bottom", fill="x")
+        tree.configure(xscrollcommand=hsb.set)
 
         # Add a button to generate the document
         def on_generate():
@@ -336,6 +341,7 @@ class GoogleToDocApp:
 
     def _save_document(self):
         """Save the document file"""
+        # TODO-> Esta es la otra parte que hay que arreglar para generar el documento completo a partir del tmeplete y luego guardarlo
         file_path = filedialog.asksaveasfilename(
             defaultextension=".docx",
             filetypes=[("Word Document", "*.docx")]
@@ -344,7 +350,7 @@ class GoogleToDocApp:
             try:
                 self.status_var.set("Generating document...")
                 title = self.title_var.get() if self.title_var.get() else None
-                self.doc_generator.generate_from_dataframes(self.current_data, file_path, title)
+                self.doc_generator.generate_from_dataframes_title_page(self.current_data, file_path, title)
                 self.status_var.set("Document generated successfully")
                 messagebox.showinfo("Success", "Document generated successfully")
             except Exception as e:
@@ -385,3 +391,7 @@ class GoogleToDocApp:
         except Exception as e:
             self.status_var.set(f"Error: {str(e)}")
             messagebox.showerror("Error", f"An error occurred: {e}")
+
+    def _update_label(self):
+        btn_selected = self.access_var.get()
+        self.identifier_label.config(text=f"Spreadsheet by {btn_selected}: " )

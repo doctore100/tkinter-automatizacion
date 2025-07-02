@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-
+import pandas as pd
 # Path utilities
 def get_default_template_path():
     """Return the path to the default template file"""
@@ -42,7 +42,7 @@ def validate_json_file(file_path, required_fields=None):
         return False, f"Error validating JSON: {str(e)}"
 
 
-def clean_data(data_fields: dict) -> dict:
+def clean_data(data_fields: dict, dataframes) -> dict:
     """
     Cleans the data by replacing NaN values with empty strings and extracting values from dataframes.
 
