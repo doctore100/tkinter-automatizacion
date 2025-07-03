@@ -1,0 +1,163 @@
+# Variables extraídas del documento "Descriptor de Cargo - FUELLES LTDA"
+
+# Variables del encabezado del documento
+HEADER_VARIABLES = [
+    'author',           # Autor del documento
+    'review',           # Persona que revisa
+    'release',          # Persona que libera
+    'version',          # Versión del documento
+    'date',             # Fecha del documento
+    'state'             # Estado del documento
+]
+
+# Variables de identificación del cargo
+IDENTIFICATION_VARIABLES = [
+    'puesto',           # Nombre del puesto (aparece múltiples veces)
+    'n_jerarquico',     # Nivel jerárquico
+    'a_trabajo',        # Área de trabajo
+    'p_participa',      # Procesos en los que participa
+    'is_supervisado',   # Es supervisado por
+    'supervisa_to',     # Supervisa a
+    'replace_to',       # Reemplaza a
+    'is_replace'        # Es reemplazado por
+]
+
+# Variables de contenido del cargo
+CONTENT_VARIABLES = [
+    'objective_position',      # Objetivo del cargo
+    'responsibilities',        # Responsabilidades generales
+    'specific_responsibilities', # Funciones específicas
+    'sgi_specific',           # Funciones dentro del SGI
+    'specific_functions'      # Matriz RASCI (funciones específicas)
+]
+
+# Variables de competencias duras
+HARD_SKILLS_VARIABLES = [
+    'educations',        # Educación requerida
+    'work_experience'    # Experiencia laboral requerida
+]
+
+# Variables de competencias blandas (todas numéricas para niveles de exigencia)
+SOFT_SKILLS_VARIABLES = [
+    'proactivity',           # Proactividad
+    'oral_expression',       # Expresión oral
+    'teamwork',             # Trabajo en equipo
+    'digital_tools',        # Uso de herramientas digitales
+    't_quality_control',    # Control de calidad textil
+    'num_geom_skills',      # Habilidad numérica y geométrica
+    'project_management',   # Gestión de proyectos
+    'troubleshooting',      # Resolución de problemas
+    'change_management',    # Gestión del cambio
+    'innovation_creativity', # Innovación y creatividad
+    'business_skills',      # Habilidad de negociación
+    'textile_techniques'    # Técnicas de costura avanzada
+]
+
+# Lista completa de todas las variables
+ALL_VARIABLES = (
+    HEADER_VARIABLES + 
+    IDENTIFICATION_VARIABLES + 
+    CONTENT_VARIABLES + 
+    HARD_SKILLS_VARIABLES + 
+    SOFT_SKILLS_VARIABLES
+)
+
+# Diccionario con descripción de cada variable para facilitar el mapeo
+VARIABLE_DESCRIPTIONS = {
+    # Header
+    'author': 'Autor del documento',
+    'review': 'Persona que revisa el documento',
+    'release': 'Persona que libera el documento',
+    'version': 'Versión del documento',
+    'date': 'Fecha del documento',
+    'state': 'Estado del documento',
+    
+    # Identification
+    'puesto': 'Nombre del puesto de trabajo',
+    'n_jerarquico': 'Nivel jerárquico en la organización',
+    'a_trabajo': 'Área de trabajo o departamento',
+    'p_participa': 'Procesos en los que participa el cargo',
+    'is_supervisado': 'Cargo o persona que supervisa este puesto',
+    'supervisa_to': 'Cargos o personas que supervisa este puesto',
+    'replace_to': 'Cargo o persona a quien reemplaza',
+    'is_replace': 'Cargo o persona que puede reemplazar este puesto',
+    
+    # Content
+    'objective_position': 'Objetivo general del cargo',
+    'responsibilities': 'Responsabilidades principales del cargo',
+    'specific_responsibilities': 'Funciones específicas del cargo',
+    'sgi_specific': 'Funciones específicas dentro del Sistema de Gestión Integrado',
+    'specific_functions': 'Contenido de la matriz RASCI y funciones específicas',
+    
+    # Hard Skills
+    'educations': 'Nivel educativo requerido',
+    'work_experience': 'Experiencia laboral requerida',
+    
+    # Soft Skills (niveles de exigencia)
+    'proactivity': 'Nivel de exigencia en proactividad',
+    'oral_expression': 'Nivel de exigencia en expresión oral',
+    'teamwork': 'Nivel de exigencia en trabajo en equipo',
+    'digital_tools': 'Nivel de exigencia en uso de herramientas digitales',
+    't_quality_control': 'Nivel de exigencia en control de calidad textil',
+    'num_geom_skills': 'Nivel de exigencia en habilidades numéricas y geométricas',
+    'project_management': 'Nivel de exigencia en gestión de proyectos',
+    'troubleshooting': 'Nivel de exigencia en resolución de problemas',
+    'change_management': 'Nivel de exigencia en gestión del cambio',
+    'innovation_creativity': 'Nivel de exigencia en innovación y creatividad',
+    'business_skills': 'Nivel de exigencia en habilidades de negociación',
+    'textile_techniques': 'Nivel de exigencia en técnicas de costura avanzada'
+}
+
+# Ejemplo de uso para automatización
+def replace_variables_in_template(template_content, variable_values):
+    """
+    Reemplaza las variables en el template con los valores proporcionados
+    
+    Args:
+        template_content (str): Contenido del template con variables {{variable}}
+        variable_values (dict): Diccionario con los valores de las variables
+    
+    Returns:
+        str: Contenido con las variables reemplazadas
+    """
+    content = template_content
+    for variable, value in variable_values.items():
+        content = content.replace(f"{{{{{variable}}}}}", str(value))
+    return content
+
+# Ejemplo de diccionario de valores
+EXAMPLE_VALUES = {
+    'author': 'Juan Pérez',
+    'review': 'María González',
+    'release': 'Carlos Rodríguez',
+    'version': '1.0',
+    'date': '2025-07-02',
+    'state': 'Vigente',
+    'puesto': 'Supervisor de Producción',
+    'n_jerarquico': 'Nivel 3',
+    'a_trabajo': 'Producción',
+    'p_participa': 'Gestión de Calidad, Producción, Mejora Continua',
+    'is_supervisado': 'Jefe de Producción',
+    'supervisa_to': 'Operarios de máquina, Auxiliares de producción',
+    'replace_to': 'Jefe de Turno',
+    'is_replace': 'Jefe de Producción (temporal)',
+    'objective_position': 'Supervisar y coordinar las actividades de producción...',
+    'responsibilities': 'Garantizar el cumplimiento de los objetivos de producción...',
+    'specific_responsibilities': 'Planificar y organizar el trabajo diario del equipo',
+    'sgi_specific': 'Verificar cumplimiento de procedimientos ISO',
+    'specific_functions': 'Matriz RASCI detallada...',
+    'educations': 'Técnico en Producción Industrial o carrera afín',
+    'work_experience': 'Mínimo 3 años en supervisión de equipos de trabajo',
+    'proactivity': '8',
+    'oral_expression': '7',
+    'teamwork': '9',
+    'digital_tools': '6',
+    't_quality_control': '8',
+    'num_geom_skills': '5',
+    'project_management': '6',
+    'troubleshooting': '8',
+    'change_management': '5',
+    'innovation_creativity': '6',
+    'business_skills': '4',
+    'textile_techniques': '7'
+}
