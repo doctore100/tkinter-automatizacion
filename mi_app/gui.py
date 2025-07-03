@@ -29,6 +29,7 @@ class GoogleToDocApp:
         self.root.title("Conversor de Google Sheets para Documento Word")
         self.root.geometry("700x700")
         self.root.configure(padx=20, pady=20, bg="lightblue")
+        # self.root.iconbitmap("assets/icon.ico")-> agregar el icono de la empresa
 
         # Initialize components
         self.connection = GoogleConnection()
@@ -122,17 +123,7 @@ class GoogleToDocApp:
         )
         template_entry.pack(side="left", padx=5, pady=10, fill="x", expand=True)
 
-        # ttk.Button(
-        #     template_frame,
-        #     text="Browse",
-        #     command=self._select_template
-        # ).pack(side="left", padx=5, pady=10)
-        #
-        # ttk.Button(
-        #     template_frame,
-        #     text="Reset to Default",
-        #     command=self._reset_template
-        # ).pack(side="left", padx=5, pady=10)
+
 
         # Access method for Google Sheets and data manipulations
         self.access_frame = ttk.LabelFrame(main_container, text="Access Method")
@@ -183,25 +174,25 @@ class GoogleToDocApp:
             width=60
         ).grid(row=1, column=1, sticky="ew", pady=5, padx=5)
 
-        # Add job title dropdown
-        ttk.Label(input_frame, text="Job Title:").grid(row=2, column=0, sticky="w", pady=5)
+        # Job title and level hierarchy fields (initially hidden)
+        self.job_title_label = ttk.Label(input_frame, text="Job Title:")
         self.job_title_combobox = ttk.Combobox(
             input_frame,
             textvariable=self.job_title_var,
             width=58,
             values=self.job_titles
         )
-        self.job_title_combobox.grid(row=2, column=1, sticky="ew", pady=5, padx=5)
 
-        # Add level hierarchy dropdown
-        ttk.Label(input_frame, text="Level Hierarchy:").grid(row=3, column=0, sticky="w", pady=5)
+        self.level_hierarchy_label = ttk.Label(input_frame, text="Level Hierarchy:")
         self.level_hierarchy_combobox = ttk.Combobox(
             input_frame,
             textvariable=self.level_hierarchy_var,
             width=58,
             values=self.level_hierarchies
         )
-        self.level_hierarchy_combobox.grid(row=3, column=1, sticky="ew", pady=5, padx=5)
+
+        # Hide these fields initially
+        self._hide_job_fields()
 
         input_frame.columnconfigure(1, weight=1)
 
@@ -230,6 +221,19 @@ class GoogleToDocApp:
         )
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
+    def _hide_job_fields(self):
+        """Hide job title and level hierarchy fields"""
+        self.job_title_label.grid_remove()
+        self.job_title_combobox.grid_remove()
+        self.level_hierarchy_label.grid_remove()
+        self.level_hierarchy_combobox.grid_remove()
+
+    def _show_job_fields(self):
+        """Show job title and level hierarchy fields after data is loaded"""
+        self.job_title_label.grid(row=2, column=0, sticky="w", pady=5)
+        self.job_title_combobox.grid(row=2, column=1, sticky="ew", pady=5, padx=5)
+        self.level_hierarchy_label.grid(row=3, column=0, sticky="w", pady=5)
+        self.level_hierarchy_combobox.grid(row=3, column=1, sticky="ew", pady=5, padx=5)
 
     def _select_credentials(self):
         """Handle credentials selection"""
@@ -327,13 +331,18 @@ class GoogleToDocApp:
             # Get data from Google Sheets
             access_type = self.access_var.get()
             self.current_data = self.sheets_reader.read_sheets(access_type, identifier)
+            #TODO comenzar a testear desde aqui
 
             if self.current_data is None or self.current_data.empty:
                 messagebox.showwarning("Warning", "No data found in the spreadsheet")
                 return
 
             # Extract job titles and level hierarchies from the data
+            #TODO
             self._extract_job_data_from_dataframe()
+
+            # Show the job fields now that data is loaded
+            self._show_job_fields()
 
             self.status_var.set("Spreadsheet processed successfully")
 
@@ -424,35 +433,59 @@ class GoogleToDocApp:
         self.identifier_label.config(text=f"Spreadsheet by {btn_selected}: " )
 
     def _extract_job_data_from_dataframe(self):
-        """Extract job titles and level hierarchies from the dataframe"""
+        """
+        Extracts job data from a given Pandas DataFrame.
+    """
         if self.current_data is None or self.current_data.empty:
+            print("No data available to extract")
             return
 
         try:
-            # Process the dataframe to extract job titles and level hierarchies
-            # Based on the structure in the dataset, job titles are in column 1 and level hierarchies in column 0
-            # Starting from row 11 (index 10) to skip headers
-            df_filtered = self.current_data.iloc[10:, :2].copy()
+            df_filter = self.doc_generator._process_data(self.current_data)
+            df_filter = df_filter.replace('', pd.NA).replace(' ', pd.NA).dropna(how='all')
 
-            # Clean the data
-            df_filtered = df_filtered.replace('', pd.NA).replace(' ', pd.NA).dropna()
-
-            # Extract unique values
-            if df_filtered.shape[1] > 1:
+            print(f"Original dataframe shape: {self.current_data}")
+            print(f"Filtered dataframe shape: {df_filter.shape}")
+            print(f"Filtered dataframe:\n{df_filter.head()}")
+        
+            if df_filter.shape[1] > 1:
                 # Get job titles from column 1
-                job_titles = df_filtered.iloc[:, 1].dropna().unique().tolist()
-                self.job_titles = [str(title).strip() for title in job_titles if str(title).strip()]
+                self.job_titles = df_filter.iloc[:, 0].tolist()
+                self.job_titles = [str(title).strip() for title in self.job_titles if str(title).strip()]
+                self.level_hierarchies = df_filter.iloc[:, 1].tolist()
+                self.level_hierarchies = [str(level).strip() for level in self.level_hierarchies if str(level).strip()]
 
-                # Get level hierarchies from column 0
-                level_hierarchies = df_filtered.iloc[:, 0].dropna().unique().tolist()
-                self.level_hierarchies = [str(level).strip() for level in level_hierarchies if str(level).strip()]
+                print(f"Extracted job titles: {self.job_titles}")
+                print(f"Extracted level hierarchies: {self.level_hierarchies}")
+                print(len(self.job_titles)==len(self.level_hierarchies))
 
-                # Update the comboboxes
-                if hasattr(self, 'job_title_combobox') and self.job_titles:
-                    self.job_title_combobox['values'] = self.job_titles
-
-                if hasattr(self, 'level_hierarchy_combobox') and self.level_hierarchies:
-                    self.level_hierarchy_combobox['values'] = self.level_hierarchies
+                # Update the comboboxes with more robust approach
+                self._update_comboboxes()
+            else:
+                print("DataFrame doesn't have enough columns")
+            
         except Exception as e:
             print(f"Error extracting job data: {e}")
-            # Don't raise the exception, just log it
+
+    def _update_comboboxes(self):
+        """Update combobox values and force refresh"""
+        try:
+            # Update job title combobox
+            if hasattr(self, 'job_title_combobox') and self.job_titles:
+                self.job_title_combobox.configure(values=self.job_titles)
+                # Clear any existing selection
+                self.job_title_combobox.set('')
+                print(f"Job title combobox updated with {len(self.job_titles)} values")
+
+            # Update level hierarchy combobox
+            if hasattr(self, 'level_hierarchy_combobox') and self.level_hierarchies:
+                self.level_hierarchy_combobox.configure(values=self.level_hierarchies)
+                # Clear any existing selection
+                self.level_hierarchy_combobox.set('')
+                print(f"Level hierarchy combobox updated with {len(self.level_hierarchies)} values")
+            
+            # Force UI update
+            self.root.update_idletasks()
+            
+        except Exception as e:
+            print(f"Error updating comboboxes: {e}")

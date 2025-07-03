@@ -110,7 +110,7 @@ class DocumentGenerator:
             pd.DataFrame: Processed dataframe
         """
         base_filter = (
-            dataframes.iloc[10:, 2:3]
+            dataframes.iloc[10:, 2:4]
             .replace('', pd.NA)
             .replace(' ', pd.NA)
             .dropna()
