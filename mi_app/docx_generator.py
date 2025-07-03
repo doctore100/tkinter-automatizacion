@@ -47,7 +47,9 @@ class DocumentGenerator:
             self,
             dataframes: pd.DataFrame,
             output_path: str,
-            title: Optional[str] = None
+            title: Optional[str] = None,
+            job_title: Optional[str] = None,
+            level_hierarchy: Optional[str] = None
     ) -> None:
         """Generate a Word document from template using dataframe data.
 
@@ -57,6 +59,8 @@ class DocumentGenerator:
             dataframes: DataFrame containing input data with specific columns/rows
             output_path: File path to save the generated document
             title: Optional document title
+            job_title: Optional job title to filter data
+            level_hierarchy: Optional level hierarchy to filter data
 
         Raises:
             ValueError: If template loading fails
@@ -85,8 +89,14 @@ class DocumentGenerator:
         doc.render(clean_data(field_position_mapping, dataframes))
 
         # Process data and generate document
-        df_data_general =self._process_data(dataframes)
-        data_to_generate_pdf=self._process_general_data(df_data_general)
+        df_data_general = self._process_data(dataframes)
+
+        # Only process job-specific data if both job_title and level_hierarchy are provided
+        # Check if job_title and level_hierarchy are strings and not empty
+        if isinstance(job_title, str) and job_title.strip() and isinstance(level_hierarchy, str) and level_hierarchy.strip():
+            data_to_generate_pdf = self._process_general_data(df_data_general, job_title, level_hierarchy)
+            # Add the job-specific data to the document context
+            doc.render(data_to_generate_pdf)
 
         doc.save(output_path)
 
@@ -109,27 +119,28 @@ class DocumentGenerator:
         another_data = dataframes.iloc[11:, 4:]
 
         if base_filter.shape[0] == another_data.shape[0]:
-            pd.DataFrame({
+            return pd.DataFrame({
                 **base_filter.reset_index(drop=True).to_dict('list'),
                 **another_data.reset_index(drop=True).to_dict('list')
             })
 
         raise ValueError("DataFrames have mismatched lengths after processing")
 
-    def _process_general_data(self, dataframes: pd.DataFrame, job_title: str, level_hierarchy: str) -> pd.Series:
+    def _process_general_data(self, dataframes: pd.DataFrame, job_title: str, level_hierarchy: str) -> dict:
         """Process and combine dataframe sections.
 
-        Searches for a row where the first column contains job_title and
-        the second column contains level_hierarchy, then returns the complete row.
+        Searches for a row where the first column contains level_hierarchy and
+        the second column contains job_title, then returns the complete row
+        with keys mapped to template placeholders.
         This version handles whitespace, case variations, and missing values robustly.
 
         Args:
             dataframes: Input dataframe containing the data
-            job_title: Value to search for in the first column
-            level_hierarchy: Value to search for in the second column
+            job_title: Value to search for in the second column
+            level_hierarchy: Value to search for in the first column
 
         Returns:
-            pd.Series: Complete row that matches both criteria
+            dict: Dictionary with keys matching template placeholders
 
         Raises:
             ValueError: If no matching row is found or multiple rows match
@@ -151,7 +162,7 @@ class DocumentGenerator:
         second_col_clean = second_col_clean.replace('nan', '')
 
         # Create boolean mask searching for the specific values
-        mask = (first_col_clean == job_title_clean) & (second_col_clean == level_hierarchy_clean)
+        mask = (first_col_clean == level_hierarchy_clean) & (second_col_clean == job_title_clean)
 
         # Filter the dataframe
         matching_rows = dataframes[mask]
@@ -159,15 +170,49 @@ class DocumentGenerator:
         # Check if exactly one row matches
         if matching_rows.empty:
             raise ValueError(
-                f"No row found with '{job_title}' in first column and '{level_hierarchy}' in second column. "
+                f"No row found with '{level_hierarchy}' in first column and '{job_title}' in second column. "
                 f"Available values in first column: {first_col.dropna().unique().tolist()[:10]}... "
                 f"Available values in second column: {second_col.dropna().unique().tolist()[:10]}..."
             )
         elif len(matching_rows) > 1:
             raise ValueError(
-                f"Multiple rows found with '{job_title}' in first column and '{level_hierarchy}' in second column. "
+                f"Multiple rows found with '{level_hierarchy}' in first column and '{job_title}' in second column. "
                 f"Found {len(matching_rows)} matching rows at indices: {matching_rows.index.tolist()}"
             )
 
-        # Return the complete matching row
-        return matching_rows.iloc[0]
+        # Get the matching row
+        row = matching_rows.iloc[0]
+
+        # Map the row values to template placeholders
+        # Based on the template structure and the datasheet columns
+        template_data = {
+            'puesto': row.iloc[1] if len(row) > 1 else '',  # Job title
+            'n_jerarquico': row.iloc[0] if len(row) > 0 else '',  # Hierarchical level
+            'a_trabajo': row.iloc[2] if len(row) > 2 else '',  # Work area
+            'p_participa': row.iloc[3] if len(row) > 3 else '',  # Processes
+            'is_supervisado': row.iloc[4] if len(row) > 4 else '',  # Supervised by
+            'supervisa_to': row.iloc[5] if len(row) > 5 else '',  # Supervises
+            'replace_to': row.iloc[6] if len(row) > 6 else '',  # Replaces
+            'is_replace': row.iloc[7] if len(row) > 7 else '',  # Is replaced by
+            'objective_position': row.iloc[8] if len(row) > 8 else '',  # Job objective
+            'responsibilities': row.iloc[9] if len(row) > 9 else '',  # Responsibilities
+            'specific_responsibilities': row.iloc[10] if len(row) > 10 else '',  # Specific functions
+            'sgi_specific': row.iloc[11] if len(row) > 11 else '',  # SGI functions
+            'specific_functions': row.iloc[12] if len(row) > 12 else '',  # RASCI matrix
+            'educations': row.iloc[13] if len(row) > 13 else '',  # Education
+            'work_experience': row.iloc[14] if len(row) > 14 else '',  # Work experience
+            'proactivity': row.iloc[15] if len(row) > 15 else '',  # Proactivity
+            'oral_expression': row.iloc[16] if len(row) > 16 else '',  # Oral expression
+            'teamwork': row.iloc[17] if len(row) > 17 else '',  # Teamwork
+            'digital_tools': row.iloc[18] if len(row) > 18 else '',  # Digital tools
+            't_quality_control': row.iloc[19] if len(row) > 19 else '',  # Quality control
+            'num_geom_skills': row.iloc[20] if len(row) > 20 else '',  # Numerical skills
+            'project_management': row.iloc[21] if len(row) > 21 else '',  # Project management
+            'troubleshooting': row.iloc[22] if len(row) > 22 else '',  # Troubleshooting
+            'change_management': row.iloc[23] if len(row) > 23 else '',  # Change management
+            'innovation_creativity': row.iloc[24] if len(row) > 24 else '',  # Innovation
+            'business_skills': row.iloc[25] if len(row) > 25 else '',  # Business skills
+            'textile_techniques': row.iloc[26] if len(row) > 26 else ''  # Textile techniques
+        }
+
+        return template_data

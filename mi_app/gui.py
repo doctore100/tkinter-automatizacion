@@ -41,7 +41,13 @@ class GoogleToDocApp:
         self.identifier_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Ready")
         self.title_var = tk.StringVar()
+        self.job_title_var = tk.StringVar()
+        self.level_hierarchy_var = tk.StringVar()
         self.template_path_var = tk.StringVar(value=self.doc_generator.default_template_path)
+
+        # Lists for dropdown values
+        self.job_titles = []
+        self.level_hierarchies = []
 
         # Setup UI
         self._setup_styles()
@@ -177,6 +183,26 @@ class GoogleToDocApp:
             width=60
         ).grid(row=1, column=1, sticky="ew", pady=5, padx=5)
 
+        # Add job title dropdown
+        ttk.Label(input_frame, text="Job Title:").grid(row=2, column=0, sticky="w", pady=5)
+        self.job_title_combobox = ttk.Combobox(
+            input_frame,
+            textvariable=self.job_title_var,
+            width=58,
+            values=self.job_titles
+        )
+        self.job_title_combobox.grid(row=2, column=1, sticky="ew", pady=5, padx=5)
+
+        # Add level hierarchy dropdown
+        ttk.Label(input_frame, text="Level Hierarchy:").grid(row=3, column=0, sticky="w", pady=5)
+        self.level_hierarchy_combobox = ttk.Combobox(
+            input_frame,
+            textvariable=self.level_hierarchy_var,
+            width=58,
+            values=self.level_hierarchies
+        )
+        self.level_hierarchy_combobox.grid(row=3, column=1, sticky="ew", pady=5, padx=5)
+
         input_frame.columnconfigure(1, weight=1)
 
         # Buttons: definen el contenedor de los botones
@@ -186,16 +212,10 @@ class GoogleToDocApp:
         buttons_container = ttk.Frame(button_frame)
         buttons_container.pack(pady=10)
 
-        ttk.Button(
-            buttons_container,
-            text="Preview and Generate Document",
-            command=self._process_document
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Add a more prominent Generate Document button
+        # Add a more prominent Load Data button
         generate_button = ttk.Button(
             button_frame,
-            text="Generate Document",
+            text="Load Data",
             command=self._generate_document_directly,
             style="Generate.TButton"
         )
@@ -251,97 +271,9 @@ class GoogleToDocApp:
         self.template_path_var.set(self.doc_generator.default_template_path)
         self.status_var.set("Reset to default template")
 
-    def _process_document(self):
-        """Process the spreadsheet and show preview"""
-        if not self.sheets_reader:
-            messagebox.showwarning(
-                "Warning",
-                "Please select and validate credentials first"
-            )
-            return
-
-        identifier = self.identifier_var.get() # Este es el valor de identificador que controla el dato entero del entry
-        if not identifier:
-            messagebox.showwarning(
-                "Warning",
-                "Please enter the spreadsheet identifier"
-            )
-            return
-
-        try:
-            self.status_var.set("Processing spreadsheet...")
-
-            # Get data from Google Sheets
-            access_type = self.access_var.get()
-            #TODO-> hace la primera lectura y devuelve un df, esto es lo primero que hay que arreglar para que use el templete
-            self.current_data = self.sheets_reader.read_sheets(access_type, identifier)
-
-            if not self.current_data:
-                messagebox.showwarning("Warning", "No data found in the spreadsheet")
-                return
-
-            self.status_var.set("Spreadsheet processed successfully")
-            self._show_preview()
-        except Exception as e:
-            self.status_var.set(f"Error: {str(e)}")
-            messagebox.showerror("Error", f"An error occurred: {e}")
-
-    def _show_preview(self):
-        """Show a preview of the spreadsheet data before generating the document"""
-        preview_window = tk.Toplevel(self.root)
-        preview_window.title("Preview")
-        preview_window.geometry("800x600")
-        preview_window.transient(self.root)
-
-        # Create a notebook (tabbed interface)
-        notebook = ttk.Notebook(preview_window)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Create a tab for each worksheet
-        # TODO -> aqui recibe el db y lo analiza por eso no usa el templete en el preview
-
-        frame = ttk.Frame(notebook)
-        notebook.add(frame, text="Data Preview")
-
-        # Create a treeview to display the data
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".docx",
-            filetypes=[("Word Document", "*.docx")]
-        )
-        if file_path:
-            try:
-                self.status_var.set("Generating document...")
-                title = self.title_var.get() if self.title_var.get() else None
-                self.doc_generator.generate_from_dataframes_title_page(self.current_data, file_path, title)
-                self.status_var.set("Document generated successfully")
-                messagebox.showinfo("Success", "Document generated successfully")
-            except Exception as e:
-                self.status_var.set(f"Error generating document: {str(e)}")
-                messagebox.showerror("Error", f"Failed to generate document: {e}")
-
-        # Add scrollbars
-        vsb = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
-        vsb.pack(side="right", fill="y")
-        tree.configure(yscrollcommand=vsb.set)
-
-        hsb = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
-        hsb.pack(side="bottom", fill="x")
-        tree.configure(xscrollcommand=hsb.set)
-
-        # Add a button to generate the document
-        def on_generate():
-            preview_window.destroy()
-            self._save_document()
-
-        ttk.Button(
-            preview_window,
-            text="Generate Document",
-            command=on_generate
-        ).pack(pady=10)
 
     def _save_document(self):
         """Save the document file"""
-        # TODO-> Esta es la otra parte que hay que arreglar para generar el documento completo a partir del tmeplete y luego guardarlo
         file_path = filedialog.asksaveasfilename(
             defaultextension=".docx",
             filetypes=[("Word Document", "*.docx")]
@@ -349,8 +281,23 @@ class GoogleToDocApp:
         if file_path:
             try:
                 self.status_var.set("Generating document...")
+
+                # Get values from input fields
                 title = self.title_var.get() if self.title_var.get() else None
-                self.doc_generator.generate_from_dataframes_title_page(self.current_data, file_path, title)
+                job_title = self.job_title_var.get() if self.job_title_var.get() else None
+                level_hierarchy = self.level_hierarchy_var.get() if self.level_hierarchy_var.get() else None
+
+                # Job title and level hierarchy should already be validated before calling this method
+
+                # Generate document with all available parameters
+                self.doc_generator.generate_from_dataframes_title_page(
+                    self.current_data, 
+                    file_path, 
+                    title,
+                    job_title,
+                    level_hierarchy
+                )
+
                 self.status_var.set("Document generated successfully")
                 messagebox.showinfo("Success", "Document generated successfully")
             except Exception as e:
@@ -358,7 +305,7 @@ class GoogleToDocApp:
                 messagebox.showerror("Error", f"Failed to generate document: {e}")
 
     def _generate_document_directly(self):
-        """Process spreadsheet and generate document directly without preview"""
+        """Process spreadsheet and open selection window"""
         if not self.sheets_reader:
             messagebox.showwarning(
                 "Warning",
@@ -381,17 +328,131 @@ class GoogleToDocApp:
             access_type = self.access_var.get()
             self.current_data = self.sheets_reader.read_sheets(access_type, identifier)
 
-            if not self.current_data:
+            if self.current_data is None or self.current_data.empty:
                 messagebox.showwarning("Warning", "No data found in the spreadsheet")
                 return
 
+            # Extract job titles and level hierarchies from the data
+            self._extract_job_data_from_dataframe()
+
             self.status_var.set("Spreadsheet processed successfully")
-            # Skip preview and directly save document
-            self._save_document()
+
+            # Open selection window
+            self._show_selection_window()
         except Exception as e:
             self.status_var.set(f"Error: {str(e)}")
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    def _show_selection_window(self):
+        """Show a window for selecting job title and level hierarchy"""
+        selection_window = tk.Toplevel(self.root)
+        selection_window.title("Select Categories")
+        selection_window.geometry("600x300")
+        selection_window.transient(self.root)
+        selection_window.grab_set()  # Make the window modal
+
+        # Create a frame for the content
+        content_frame = ttk.Frame(selection_window, padding=20)
+        content_frame.pack(fill="both", expand=True)
+
+        # Add instructions
+        ttk.Label(
+            content_frame,
+            text="Select Job Title and Level Hierarchy to generate the document:",
+            font=("Arial", 12)
+        ).pack(pady=(0, 20))
+
+        # Add job title dropdown
+        job_frame = ttk.Frame(content_frame)
+        job_frame.pack(fill="x", pady=5)
+
+        ttk.Label(job_frame, text="Job Title:", width=15).pack(side="left")
+        job_combobox = ttk.Combobox(
+            job_frame,
+            width=40,
+            values=self.job_titles
+        )
+        job_combobox.pack(side="left", padx=5, fill="x", expand=True)
+
+        # Add level hierarchy dropdown
+        level_frame = ttk.Frame(content_frame)
+        level_frame.pack(fill="x", pady=5)
+
+        ttk.Label(level_frame, text="Level Hierarchy:", width=15).pack(side="left")
+        level_combobox = ttk.Combobox(
+            level_frame,
+            width=40,
+            values=self.level_hierarchies
+        )
+        level_combobox.pack(side="left", padx=5, fill="x", expand=True)
+
+        # Add a button frame
+        button_frame = ttk.Frame(content_frame)
+        button_frame.pack(pady=20)
+
+        def on_generate():
+            job_title = job_combobox.get()
+            level_hierarchy = level_combobox.get()
+
+            if not job_title or not level_hierarchy:
+                messagebox.showwarning(
+                    "Warning", 
+                    "Please select both Job Title and Level Hierarchy before generating the document.",
+                    parent=selection_window
+                )
+                return
+
+            # Set the values in the main window variables
+            self.job_title_var.set(job_title)
+            self.level_hierarchy_var.set(level_hierarchy)
+
+            # Close the selection window
+            selection_window.destroy()
+
+            # Generate the document
+            self._save_document()
+
+        ttk.Button(
+            button_frame,
+            text="Generate Document",
+            command=on_generate,
+            style="Generate.TButton"
+        ).pack(pady=10)
+
     def _update_label(self):
         btn_selected = self.access_var.get()
         self.identifier_label.config(text=f"Spreadsheet by {btn_selected}: " )
+
+    def _extract_job_data_from_dataframe(self):
+        """Extract job titles and level hierarchies from the dataframe"""
+        if self.current_data is None or self.current_data.empty:
+            return
+
+        try:
+            # Process the dataframe to extract job titles and level hierarchies
+            # Based on the structure in the dataset, job titles are in column 1 and level hierarchies in column 0
+            # Starting from row 11 (index 10) to skip headers
+            df_filtered = self.current_data.iloc[10:, :2].copy()
+
+            # Clean the data
+            df_filtered = df_filtered.replace('', pd.NA).replace(' ', pd.NA).dropna()
+
+            # Extract unique values
+            if df_filtered.shape[1] > 1:
+                # Get job titles from column 1
+                job_titles = df_filtered.iloc[:, 1].dropna().unique().tolist()
+                self.job_titles = [str(title).strip() for title in job_titles if str(title).strip()]
+
+                # Get level hierarchies from column 0
+                level_hierarchies = df_filtered.iloc[:, 0].dropna().unique().tolist()
+                self.level_hierarchies = [str(level).strip() for level in level_hierarchies if str(level).strip()]
+
+                # Update the comboboxes
+                if hasattr(self, 'job_title_combobox') and self.job_titles:
+                    self.job_title_combobox['values'] = self.job_titles
+
+                if hasattr(self, 'level_hierarchy_combobox') and self.level_hierarchies:
+                    self.level_hierarchy_combobox['values'] = self.level_hierarchies
+        except Exception as e:
+            print(f"Error extracting job data: {e}")
+            # Don't raise the exception, just log it
