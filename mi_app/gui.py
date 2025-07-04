@@ -95,7 +95,7 @@ class GoogleToDocApp:
         ttk.Button(
             creds_frame,
             text="Select Credentials File",
-            command=self._select_credentials # retorna true o false
+            command=self._select_credentials  # retorna true o false
         ).pack(side="left", padx=5, pady=10)
 
         self.creds_label = ttk.Label(creds_frame, text="No credentials selected")
@@ -122,8 +122,6 @@ class GoogleToDocApp:
             width=40
         )
         template_entry.pack(side="left", padx=5, pady=10, fill="x", expand=True)
-
-
 
         # Access method for Google Sheets and data manipulations
         self.access_frame = ttk.LabelFrame(main_container, text="Access Method")
@@ -157,13 +155,13 @@ class GoogleToDocApp:
         input_frame = ttk.Frame(main_container)
         input_frame.pack(fill="x", pady=10, padx=5)
 
-        self.identifier_label = ttk.Label(input_frame, text="Spreadsheet by: " )
+        self.identifier_label = ttk.Label(input_frame, text="Spreadsheet by: ")
         self.identifier_label.grid(row=0, column=0, sticky="w", pady=5)
         self._update_label()
 
         ttk.Entry(
             input_frame,
-            textvariable=self.identifier_var,# el contenido entero del entry
+            textvariable=self.identifier_var,  # el contenido entero del entry
             width=60
         ).grid(row=0, column=1, sticky="ew", pady=5, padx=5)
 
@@ -256,25 +254,24 @@ class GoogleToDocApp:
         else:
             self.status_var.set("Credentials validation failed")
 
-    def _select_template(self):
-        """Allow user to select a template file"""
-        file_path = filedialog.askopenfilename(
-            title="Select Template File",
-            filetypes=[("Word Templates", "*.docx")]
-        )
-        if file_path:
-            if self.doc_generator.set_template(file_path):
-                self.template_path_var.set(file_path)
-                self.status_var.set(f"Template selected: {os.path.basename(file_path)}")
-            else:
-                messagebox.showerror("Error", "Invalid template file")
-
-    def _reset_template(self):
-        """Reset to the default template"""
-        self.doc_generator.reset_to_default_template()
-        self.template_path_var.set(self.doc_generator.default_template_path)
-        self.status_var.set("Reset to default template")
-
+    # def _select_template(self):
+    #     """Allow user to select a template file"""
+    #     file_path = filedialog.askopenfilename(
+    #         title="Select Template File",
+    #         filetypes=[("Word Templates", "*.docx")]
+    #     )
+    #     if file_path:
+    #         if self.doc_generator.set_template(file_path):
+    #             self.template_path_var.set(file_path)
+    #             self.status_var.set(f"Template selected: {os.path.basename(file_path)}")
+    #         else:
+    #             messagebox.showerror("Error", "Invalid template file")
+    #
+    # def _reset_template(self):
+    #     """Reset to the default template"""
+    #     self.doc_generator.reset_to_default_template()
+    #     self.template_path_var.set(self.doc_generator.default_template_path)
+    #     self.status_var.set("Reset to default template")
 
     def _save_document(self):
         """Save the document file"""
@@ -294,12 +291,13 @@ class GoogleToDocApp:
                 # Job title and level hierarchy should already be validated before calling this method
 
                 # Generate document with all available parameters
+                # print(f"this is the la data total {self.current_data}"
                 self.doc_generator.generate_from_dataframes_title_page(
-                    self.current_data, 
-                    file_path, 
-                    title,
+                    self.current_data,
+                    file_path,
                     job_title,
-                    level_hierarchy
+                    level_hierarchy,
+                    title,
                 )
 
                 self.status_var.set("Document generated successfully")
@@ -331,14 +329,12 @@ class GoogleToDocApp:
             # Get data from Google Sheets
             access_type = self.access_var.get()
             self.current_data = self.sheets_reader.read_sheets(access_type, identifier)
-            #TODO comenzar a testear desde aqui
 
             if self.current_data is None or self.current_data.empty:
                 messagebox.showwarning("Warning", "No data found in the spreadsheet")
                 return
 
             # Extract job titles and level hierarchies from the data
-            #TODO
             self._extract_job_data_from_dataframe()
 
             # Show the job fields now that data is loaded
@@ -405,7 +401,7 @@ class GoogleToDocApp:
 
             if not job_title or not level_hierarchy:
                 messagebox.showwarning(
-                    "Warning", 
+                    "Warning",
                     "Please select both Job Title and Level Hierarchy before generating the document.",
                     parent=selection_window
                 )
@@ -430,42 +426,66 @@ class GoogleToDocApp:
 
     def _update_label(self):
         btn_selected = self.access_var.get()
-        self.identifier_label.config(text=f"Spreadsheet by {btn_selected}: " )
+        self.identifier_label.config(text=f"Spreadsheet by {btn_selected}: ")
 
     def _extract_job_data_from_dataframe(self):
-        """
-        Extracts job data from a given Pandas DataFrame.
-    """
-        if self.current_data is None or self.current_data.empty:
-            print("No data available to extract")
+        """Extract job titles and level hierarchies from the dataframe with unique identifiers."""
+        if self.current_data is None:
             return
 
-        try:
-            df_filter = self.doc_generator._process_data(self.current_data)
-            df_filter = df_filter.replace('', pd.NA).replace(' ', pd.NA).dropna(how='all')
+        # Get the first two columns only
+        df_filter = self.current_data.iloc[:, :2].copy()
+        df_filter = df_filter.replace('', pd.NA).replace(' ', pd.NA).dropna(how='all')
 
-            print(f"Original dataframe shape: {self.current_data}")
-            print(f"Filtered dataframe shape: {df_filter.shape}")
-            print(f"Filtered dataframe:\n{df_filter.head()}")
-        
-            if df_filter.shape[1] > 1:
-                # Get job titles from column 1
-                self.job_titles = df_filter.iloc[:, 0].tolist()
-                self.job_titles = [str(title).strip() for title in self.job_titles if str(title).strip()]
-                self.level_hierarchies = df_filter.iloc[:, 1].tolist()
-                self.level_hierarchies = [str(level).strip() for level in self.level_hierarchies if str(level).strip()]
+        if df_filter.shape[1] > 1:
+            # Create unique identifiers for each row including the row index
+            job_titles = []
+            level_hierarchies = []
 
-                print(f"Extracted job titles: {self.job_titles}")
-                print(f"Extracted level hierarchies: {self.level_hierarchies}")
-                print(len(self.job_titles)==len(self.level_hierarchies))
+            for idx, row in df_filter.iterrows():
+                job_title = str(row.iloc[0]).strip()
+                level_hierarchy = str(row.iloc[1]).strip()
 
-                # Update the comboboxes with more robust approach
-                self._update_comboboxes()
-            else:
-                print("DataFrame doesn't have enough columns")
-            
-        except Exception as e:
-            print(f"Error extracting job data: {e}")
+                if job_title and level_hierarchy and job_title.lower() != 'nan' and level_hierarchy.lower() != 'nan':
+                    # Create unique identifier with original index
+                    unique_job_title = f"{job_title} (Row {idx})"
+                    unique_level_hierarchy = f"{level_hierarchy} (Row {idx})"
+
+                    job_titles.append(unique_job_title)
+                    level_hierarchies.append(unique_level_hierarchy)
+
+            # Remove duplicates while preserving order
+            self.job_titles = list(dict.fromkeys(job_titles))
+            self.level_hierarchies = list(dict.fromkeys(level_hierarchies))
+
+        return self.job_titles, self.level_hierarchies
+        # self.job_titles = []
+        # self.level_hierarchies = []
+        # """
+        # Extracts job data from a given Pandas DataFrame.
+        # """
+        # if self.current_data is None or self.current_data.empty:
+        #     print("No data available to extract")
+        #     return
+        #
+        # try:
+        #     df_filter = self.doc_generator._process_data(self.current_data)
+        #     df_filter = df_filter.replace('', pd.NA).replace(' ', pd.NA).dropna(how='all')
+        #
+        #     if df_filter.shape[1] > 1:
+        #         # Get job titles from column 1
+        #         self.job_titles = df_filter.iloc[:, 0].tolist()
+        #         self.job_titles = [str(title).strip() for title in self.job_titles if str(title).strip()]
+        #         self.level_hierarchies = df_filter.iloc[:, 1].tolist()
+        #         self.level_hierarchies = [str(level).strip() for level in self.level_hierarchies if str(level).strip()]
+        #
+        #         # Update the comboboxes with more robust approach
+        #         self._update_comboboxes()
+        #     else:
+        #         print("DataFrame doesn't have enough columns")
+        #
+        # except Exception as e:
+        #     print(f"Error extracting job data: {e}")
 
     def _update_comboboxes(self):
         """Update combobox values and force refresh"""
@@ -475,17 +495,15 @@ class GoogleToDocApp:
                 self.job_title_combobox.configure(values=self.job_titles)
                 # Clear any existing selection
                 self.job_title_combobox.set('')
-                print(f"Job title combobox updated with {len(self.job_titles)} values")
 
             # Update level hierarchy combobox
             if hasattr(self, 'level_hierarchy_combobox') and self.level_hierarchies:
                 self.level_hierarchy_combobox.configure(values=self.level_hierarchies)
                 # Clear any existing selection
                 self.level_hierarchy_combobox.set('')
-                print(f"Level hierarchy combobox updated with {len(self.level_hierarchies)} values")
-            
+
             # Force UI update
             self.root.update_idletasks()
-            
+
         except Exception as e:
             print(f"Error updating comboboxes: {e}")

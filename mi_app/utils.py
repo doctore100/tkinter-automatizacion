@@ -57,4 +57,5 @@ def clean_data(data_fields: dict, dataframes) -> dict:
         field: '' if pd.isna(dataframes.iloc[row, col]) else dataframes.iloc[row, col]
         for field, (row, col) in data_fields.items()
     }
+    print(f"Cleaned data: {cleaned_data}")
     return cleaned_data

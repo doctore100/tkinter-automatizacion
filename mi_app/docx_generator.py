@@ -15,7 +15,7 @@ class DocumentGenerator:
     uses the DocxTemplate library for document generation.
     """
 
-    def __init__(self, template_path: Optional[str] = None) -> None:
+    def __init__(self,) -> None:
         """Initialize the DocumentGenerator with an optional template path.
 
         Args:
@@ -23,7 +23,8 @@ class DocumentGenerator:
                           the default template will be used.
         """
         self.default_template_path = get_default_template_path()
-        self.template_path = template_path or self.default_template_path
+        #Todo desactivar la funcionalidad de tomar un templete path
+        self.template_path = self.default_template_path
 
     def set_template(self, template_path: str) -> bool:
         """Set a custom template for document generation.
@@ -47,9 +48,10 @@ class DocumentGenerator:
             self,
             dataframes: pd.DataFrame,
             output_path: str,
+            job_title: str,
+            level_hierarchy: str,
             title: Optional[str] = None,
-            job_title: Optional[str] = None,
-            level_hierarchy: Optional[str] = None
+
     ) -> None:
         """Generate a Word document from template using dataframe data.
 
@@ -67,6 +69,7 @@ class DocumentGenerator:
         """
         try:
             doc = DocxTemplate(self.template_path)
+            print(f'este es el path del templete: {self.template_path}')
         except Exception as e:
             raise ValueError(f"Failed to load template: {str(e)}")
 
@@ -86,10 +89,13 @@ class DocumentGenerator:
         }
 
         field_position_mapping = {**executive_summary, **page_header}
+        print(f"Field position mapping: {field_position_mapping}")
+        ##### clean_data devuelve lo correcto
         doc.render(clean_data(field_position_mapping, dataframes))
 
         # Process data and generate document
         df_data_general = self._process_data(dataframes)
+        print(f"Data to generate PDF para procesar el resto del dato: {df_data_general}")
 
         # Only process job-specific data if both job_title and level_hierarchy are provided
         # Check if job_title and level_hierarchy are strings and not empty
@@ -127,6 +133,7 @@ class DocumentGenerator:
         raise ValueError("DataFrames have mismatched lengths after processing")
 
     def _process_general_data(self, dataframes: pd.DataFrame, job_title: str, level_hierarchy: str) -> dict:
+        # print(f'job_title: {job_title} y level_hierarchy {level_hierarchy} \n el dataframe {dataframes} dentro de _process_general_data')
         """Process and combine dataframe sections.
 
         Searches for a row where the first column contains level_hierarchy and
@@ -148,6 +155,7 @@ class DocumentGenerator:
         # Get the first two columns
         first_col = dataframes.iloc[:, 0]
         second_col = dataframes.iloc[:, 1]
+        print(f'first_col: {dataframes.iloc[:, 0].tolist()} \n y second_col: {dataframes.iloc[:, 1].tolist()} dentro de _process_general_data')
 
         # Convert to string, handle NaN values, strip whitespace, and convert to lowercase for comparison
         first_col_clean = first_col.astype(str).str.strip().str.lower()
@@ -158,11 +166,13 @@ class DocumentGenerator:
         level_hierarchy_clean = str(level_hierarchy).strip().lower()
 
         # Filter out 'nan' values that come from converting NaN to string
-        first_col_clean = first_col_clean.replace('nan', '')
-        second_col_clean = second_col_clean.replace('nan', '')
+
 
         # Create boolean mask searching for the specific values
         mask = (first_col_clean == level_hierarchy_clean) & (second_col_clean == job_title_clean)
+        print(f'paso 1 de la mascara :{first_col_clean == level_hierarchy_clean}')
+        print(f'paso 2 de la mascara :{second_col_clean == job_title_clean}')
+        print(f"Mask: {mask}")
 
         # Filter the dataframe
         matching_rows = dataframes[mask]
